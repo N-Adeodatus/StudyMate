@@ -22,9 +22,14 @@ export default function Home() {
             <Link href="/solve" className="text-gray-700 hover:text-blue-600 transition-colors">Ask Questions</Link>
             <Link href="/files" className="text-gray-700 hover:text-blue-600 transition-colors">My Files</Link>
           </nav>
-          <Link href="/solve" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
-            Get Started
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link href="/signin" className="text-gray-700 hover:text-blue-600 transition-colors whitespace-nowrap">
+              Sign In
+            </Link>
+            <Link href="/signup" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+              Sign Up
+            </Link>
+          </div>
         </div>
       </header>
       

@@ -61,10 +61,10 @@ export default function FilesPage() {
             <i className="ri-folder-line"></i>
             <span>My Files</span>
           </a>
-          <a href="/profile" className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-            <i className="ri-user-line"></i>
-            <span>Profile</span>
-          </a>
+          <button className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors w-full text-left">
+            <i className="ri-logout-box-line"></i>
+            <span>Logout</span>
+          </button>
         </nav>
 
         <div className="p-4 border-t border-gray-200">

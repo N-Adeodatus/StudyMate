@@ -144,8 +144,8 @@ export default function SolvePage() {
           )}
           <div className="p-4 border-t border-gray-200 mt-auto mb-12">
             <button className="w-full flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors justify-center">
-              <i className="ri-user-line"></i>
-              {sidebarOpen && <span>Profile</span>}
+              <i className="ri-logout-box-line"></i>
+              {sidebarOpen && <span>Logout</span>}
             </button>
           </div>
         </div>

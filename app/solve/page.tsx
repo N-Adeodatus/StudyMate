@@ -5,6 +5,8 @@ import { useState } from 'react';
 import ProblemInput from './ProblemInput';
 import FileUpload from '../../components/FileUpload';
 import QuestionInterface from '../../components/QuestionInterface';
+import SolutionDisplay from './SolutionDisplay';
+import { getAIResponse } from './actions';
 
 type Solution = {
   problem: string;
@@ -44,8 +46,28 @@ export default function SolvePage() {
     };
     setHistory(prev => [newHistoryItem, ...prev]);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Get response from Mistral AI via server action
+      const response = await getAIResponse(problem, selectedFile?.id);
+      
+      if (response.success) {
+        // Parse the response to fit our solution format
+        setSolution({
+          problem: problem,
+          steps: [
+            { step: 1, description: 'Analyze the question', content: problem },
+            { step: 2, description: 'Process information', content: 'Using AI to analyze and understand the question' },
+            { step: 3, description: 'Generate response', content: 'Creating a comprehensive answer based on available knowledge' },
+            { step: 4, description: 'Provide detailed explanation', content: response.data || '' }
+          ],
+          answer: response.data || 'No response received',
+          explanation: 'This answer was generated using Mistral AI with the latest available knowledge.'
+        });
+      } else {
+        throw new Error(response.error || 'Unknown error');
+      }
+    } catch (error) {
+      console.error('Error generating response:', error);
       setSolution({
         problem: problem,
         steps: [
@@ -54,11 +76,12 @@ export default function SolvePage() {
           { step: 3, description: 'Apply relevant knowledge', content: 'Use appropriate principles and methods' },
           { step: 4, description: 'Provide detailed explanation', content: 'Explain the reasoning and final answer' }
         ],
-        answer: 'Here is the comprehensive answer to your question.',
-        explanation: 'This question can be answered by applying fundamental principles and logical reasoning.'
+        answer: 'Sorry, I encountered an error while processing your question. Please try again.',
+        explanation: 'There was an issue connecting to the AI service. Please check your connection and try again.'
       });
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleFileUpload = (files: any[]) => {
@@ -228,6 +251,12 @@ export default function SolvePage() {
                 </div>
               </div>
             )}
+
+            <SolutionDisplay 
+              solution={solution} 
+              isLoading={isLoading} 
+              currentProblem={currentProblem} 
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               

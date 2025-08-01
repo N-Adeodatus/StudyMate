@@ -17,6 +17,8 @@ export default function ProblemInput({ onSolve, isLoading, onAttachClick, onCame
     e.preventDefault();
     if (problem.trim()) {
       onSolve(problem.trim());
+      // Clear the input after submitting
+      setProblem('');
     }
   };
 

@@ -9,6 +9,9 @@ const availableFunctions = {
   searchInFiles
 };
 
+// Persistent messages array to store the conversation history
+let messages: any[] = [];
+
 // Function to interact with Mistral AI as an agent
 export async function agent(query: string, selectedFileId?: number) {
   // Initialize Mistral client with API key from environment variables
@@ -19,15 +22,13 @@ export async function agent(query: string, selectedFileId?: number) {
 
   const client = new Mistral({ apiKey });
 
-  // Messages array to store the conversation
-  const messages: any[] = [
-    { 
-      role: "user", 
-      content: selectedFileId 
-        ? `Answer this question based on the file with ID ${selectedFileId}: ${query}` 
-        : query 
-    }
-  ];
+  // Add user message to conversation history
+  messages.push({ 
+    role: "user", 
+    content: selectedFileId 
+      ? `Answer this question based on the file with ID ${selectedFileId}: ${query}` 
+      : query 
+  });
 
   // Loop to keep calling tools if needed (max 5 iterations)
   for (let i = 0; i < 5; i++) {
@@ -45,6 +46,11 @@ export async function agent(query: string, selectedFileId?: number) {
         // If AI is done responding, return the final response
         if (chunk.data.choices[0].finishReason === 'stop') {
           console.log('Final response:', fullResponse);
+          // Add AI response to conversation history
+          messages.push({ 
+            role: "assistant", 
+            content: fullResponse 
+          });
           return fullResponse;
         }
         
@@ -98,4 +104,14 @@ export async function generateResponse(query: string, selectedFileId?: number) {
     console.error('Error generating response:', error);
     throw error;
   }
+}
+
+// Function to get the conversation history
+export function getConversationHistory() {
+  return messages;
+}
+
+// Function to clear the conversation history
+export function clearConversationHistory() {
+  messages = [];
 }

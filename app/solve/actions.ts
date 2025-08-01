@@ -1,6 +1,6 @@
 'use server';
 
-import { generateResponse } from './mistralClient';
+import { generateResponse, getConversationHistory, clearConversationHistory } from './mistralClient';
 
 export async function getAIResponse(query: string, selectedFileId?: number) {
   try {
@@ -10,4 +10,13 @@ export async function getAIResponse(query: string, selectedFileId?: number) {
     console.error('Error generating response:', error);
     return { success: false, error: 'Failed to generate response' };
   }
+}
+
+export async function getConversationHistoryAction() {
+  return getConversationHistory();
+}
+
+export async function clearConversationHistoryAction() {
+  clearConversationHistory();
+  return { success: true };
 }

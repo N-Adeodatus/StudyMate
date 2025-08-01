@@ -1,23 +1,15 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProblemInput from './ProblemInput';
 import FileUpload from '../../components/FileUpload';
 import QuestionInterface from '../../components/QuestionInterface';
-import SolutionDisplay from './SolutionDisplay';
-import { getAIResponse } from './actions';
-
-type Solution = {
-  problem: string;
-  steps: { step: number; description: string; content: string }[];
-  answer: string;
-  explanation: string;
-};
+import ConversationDisplay from './ConversationDisplay';
+import { getAIResponse, getConversationHistoryAction, clearConversationHistoryAction } from './actions';
 
 export default function SolvePage() {
-  const [currentProblem, setCurrentProblem] = useState('');
-  const [solution, setSolution] = useState<Solution | null>(null);
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant' | 'tool'; content: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const [selectedFile, setSelectedFile] = useState<any>(null);
@@ -34,9 +26,22 @@ export default function SolvePage() {
     { id: 8, question: 'Shakespeare sonnets analysis', timestamp: '2024-01-12 13:20' }
   ]);
 
+  // Load conversation history on component mount
+  useEffect(() => {
+    loadConversationHistory();
+  }, []);
+
+  const loadConversationHistory = async () => {
+    try {
+      const history = await getConversationHistoryAction();
+      setMessages(history);
+    } catch (error) {
+      console.error('Error loading conversation history:', error);
+    }
+  };
+
   const handleSolve = async (problem: string) => {
     setIsLoading(true);
-    setCurrentProblem(problem);
     
     // Add to history
     const newHistoryItem = {
@@ -51,36 +56,30 @@ export default function SolvePage() {
       const response = await getAIResponse(problem, selectedFile?.id);
       
       if (response.success) {
-        // Parse the response to fit our solution format
-        setSolution({
-          problem: problem,
-          steps: [
-            { step: 1, description: 'Analyze the question', content: problem },
-            { step: 2, description: 'Process information', content: 'Using AI to analyze and understand the question' },
-            { step: 3, description: 'Generate response', content: 'Creating a comprehensive answer based on available knowledge' },
-            { step: 4, description: 'Provide detailed explanation', content: response.data || '' }
-          ],
-          answer: response.data || 'No response received',
-          explanation: 'This answer was generated using Mistral AI with the latest available knowledge.'
-        });
+        // Reload conversation history to include the new messages
+        await loadConversationHistory();
       } else {
         throw new Error(response.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Error generating response:', error);
-      setSolution({
-        problem: problem,
-        steps: [
-          { step: 1, description: 'Analyze the question', content: problem },
-          { step: 2, description: 'Identify key concepts', content: 'Break down the main components and relationships' },
-          { step: 3, description: 'Apply relevant knowledge', content: 'Use appropriate principles and methods' },
-          { step: 4, description: 'Provide detailed explanation', content: 'Explain the reasoning and final answer' }
-        ],
-        answer: 'Sorry, I encountered an error while processing your question. Please try again.',
-        explanation: 'There was an issue connecting to the AI service. Please check your connection and try again.'
-      });
+      // Add error message to conversation
+      setMessages(prev => [
+        ...prev,
+        { role: 'user', content: problem },
+        { role: 'assistant', content: 'Sorry, I encountered an error while processing your question. Please try again.' }
+      ]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleClearConversation = async () => {
+    try {
+      await clearConversationHistoryAction();
+      setMessages([]);
+    } catch (error) {
+      console.error('Error clearing conversation:', error);
     }
   };
 
@@ -166,6 +165,13 @@ export default function SolvePage() {
             </div>
           )}
           <div className="p-4 border-t border-gray-200 mt-auto mb-12">
+            <button 
+              onClick={handleClearConversation}
+              className="w-full flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors justify-center mb-2"
+            >
+              <i className="ri-delete-bin-line"></i>
+              {sidebarOpen && <span>Clear Chat</span>}
+            </button>
             <button className="w-full flex items-center space-x-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors justify-center">
               <i className="ri-logout-box-line"></i>
               {sidebarOpen && <span>Logout</span>}
@@ -204,13 +210,6 @@ export default function SolvePage() {
 
         <main className="p-6 flex items-center justify-center min-h-screen">
           <div className={`w-full space-y-6 ${sidebarOpen ? 'max-w-5xl' : 'max-w-4xl'}`}>
-            <ProblemInput 
-              onSolve={handleSolve} 
-              isLoading={isLoading} 
-              onAttachClick={handleAttachClick}
-              onCameraClick={handleCameraClick}
-            />
-            
             {showFileUpload && (
               <FileUpload onUpload={handleFileUpload} />
             )}
@@ -252,18 +251,23 @@ export default function SolvePage() {
               </div>
             )}
 
-            <SolutionDisplay 
-              solution={solution} 
+            <ConversationDisplay 
+              messages={messages} 
               isLoading={isLoading} 
-              currentProblem={currentProblem} 
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
               {selectedFile && (
                 <QuestionInterface selectedFile={selectedFile} />
               )}
             </div>
+
+            <ProblemInput 
+              onSolve={handleSolve} 
+              isLoading={isLoading} 
+              onAttachClick={handleAttachClick}
+              onCameraClick={handleCameraClick}
+            />
           </div>
         </main>
       </div>

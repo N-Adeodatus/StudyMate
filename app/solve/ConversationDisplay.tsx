@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface Message {
   role: 'user' | 'assistant' | 'tool';
@@ -62,7 +66,25 @@ export default function ConversationDisplay({ messages, isLoading }: Conversatio
                   {message.role === 'user' ? 'You' : message.role === 'assistant' ? 'AI Assistant' : 'Tool'}
                 </span>
               </div>
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={{
+                    h1: ({node, ...props}) => <h1 className="text-xl font-bold mt-4 mb-2" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="font-bold mt-2 mb-1" {...props} />,
+                    p: ({node, ...props}) => <p className="mb-2" {...props} />,
+                    ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2" {...props} />,
+                    ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2" {...props} />,
+                    li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                    strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
+                    em: ({node, ...props}) => <em className="italic" {...props} />,
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         ))}

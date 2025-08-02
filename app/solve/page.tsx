@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ProblemInput from './ProblemInput';
 import FileUpload from '../../components/FileUpload';
 import QuestionInterface from '../../components/QuestionInterface';
 import ConversationDisplay from './ConversationDisplay';
-import { getAIResponse, getConversationHistoryAction, clearConversationHistoryAction } from './actions';
+import { getConversationHistoryAction, clearConversationHistoryAction } from './actions';
 
 export default function SolvePage() {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant' | 'tool'; content: string }[]>([]);
@@ -25,6 +25,8 @@ export default function SolvePage() {
     { id: 7, question: 'Chemical bonding types', timestamp: '2024-01-12 15:45' },
     { id: 8, question: 'Shakespeare sonnets analysis', timestamp: '2024-01-12 13:20' }
   ]);
+  
+  const currentAssistantMessageRef = useRef('');
 
   // Load conversation history on component mount
   useEffect(() => {
@@ -43,6 +45,10 @@ export default function SolvePage() {
   const handleSolve = async (problem: string) => {
     setIsLoading(true);
     
+    // Add user message to conversation
+    const userMessage = { role: 'user' as const, content: problem };
+    setMessages(prev => [...prev, userMessage]);
+    
     // Add to history
     const newHistoryItem = {
       id: Date.now(),
@@ -52,23 +58,89 @@ export default function SolvePage() {
     setHistory(prev => [newHistoryItem, ...prev]);
     
     try {
-      // Get response from Mistral AI via server action
-      const response = await getAIResponse(problem, selectedFile?.id);
+      // Create a new assistant message placeholder
+      const assistantMessage = { role: 'assistant' as const, content: '' };
+      setMessages(prev => [...prev, assistantMessage]);
+      currentAssistantMessageRef.current = '';
       
-      if (response.success) {
-        // Reload conversation history to include the new messages
-        await loadConversationHistory();
-      } else {
-        throw new Error(response.error || 'Unknown error');
+      // Make a POST request to the streaming API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: problem,
+          selectedFileId: selectedFile?.id
+        })
+      });
+      
+      if (!response.body) {
+        throw new Error('ReadableStream not supported');
+      }
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      // Read the stream
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break;
+        }
+        
+        // Decode the chunk
+        const chunk = decoder.decode(value, { stream: true });
+        
+        // Parse the SSE format
+        const lines = chunk.split('\n\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.error) {
+                // Handle error
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const lastMessage = newMessages[newMessages.length - 1];
+                  if (lastMessage.role === 'assistant') {
+                    lastMessage.content = 'Sorry, I encountered an error while processing your question. Please try again.';
+                  }
+                  return newMessages;
+                });
+                break;
+              }
+              
+              // Update the assistant message with the new chunk
+              currentAssistantMessageRef.current += data.content;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage.role === 'assistant') {
+                  lastMessage.content = currentAssistantMessageRef.current;
+                }
+                return newMessages;
+              });
+            } catch (e) {
+              console.error('Error parsing JSON:', e);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error generating response:', error);
       // Add error message to conversation
-      setMessages(prev => [
-        ...prev,
-        { role: 'user', content: problem },
-        { role: 'assistant', content: 'Sorry, I encountered an error while processing your question. Please try again.' }
-      ]);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastMessage = newMessages[newMessages.length - 1];
+        if (lastMessage.role === 'assistant') {
+          lastMessage.content = 'Sorry, I encountered an error while processing your question. Please try again.';
+        }
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -78,6 +150,7 @@ export default function SolvePage() {
     try {
       await clearConversationHistoryAction();
       setMessages([]);
+      currentAssistantMessageRef.current = '';
     } catch (error) {
       console.error('Error clearing conversation:', error);
     }

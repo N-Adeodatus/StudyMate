@@ -18,6 +18,14 @@ const systemPrompt = {
   content: `You are a helpful math assistant. When writing math, never put $...$ inside $$...$$ or vice versa. Only use $...$ for inline math and $$...$$ for display math, and never mix them. Do not put $...$ around numbers or variables inside a math block. Always use valid LaTeX. For example, use \frac{a}{b} for fractions, x^{2} for exponents, and enclose math in $...$ for inline or $$...$$ for block math. Do not use plain text math like a/b or x^2. Always use LaTeX so it can be rendered beautifully.`
 };
 
+// Function to add system prompt only if it hasn't been added yet
+function addSystemPromptIfNeeded() {
+  // Check if the first message is already a system prompt
+  if (messages.length === 0 || messages[0].role !== 'system') {
+    messages.unshift(systemPrompt);
+  }
+}
+
 // Function to interact with Mistral AI as an agent with streaming support
 export async function agent(query: string, selectedFileId?: number) {
   // Initialize Mistral client with API key from environment variables
@@ -28,8 +36,10 @@ export async function agent(query: string, selectedFileId?: number) {
 
   const client = new Mistral({ apiKey });
 
+  // Add system prompt if needed
+  addSystemPromptIfNeeded();
+  
   // Add user message to conversation history
-  messages.push(systemPrompt);
   messages.push({ 
     role: "user", 
     content: selectedFileId 
@@ -83,9 +93,11 @@ export async function agent(query: string, selectedFileId?: number) {
           console.log('Result from tool:', result);
           
           // Add the tool result to the conversation
+          // Ensure result is a string (tools return JSON strings)
+          const resultString = typeof result === 'string' ? result : JSON.stringify(result);
           messages.push({ 
             role: 'tool', 
-            content: result,
+            content: resultString,
             tool_call_id: toolCallId 
           } as any);
           
@@ -113,8 +125,10 @@ export async function* generateStreamingResponse(query: string, selectedFileId?:
 
     const client = new Mistral({ apiKey });
 
+    // Add system prompt if needed
+    addSystemPromptIfNeeded();
+    
     // Add user message to conversation history
-    messages.push(systemPrompt);
     messages.push({ 
       role: "user", 
       content: selectedFileId 
@@ -166,9 +180,11 @@ export async function* generateStreamingResponse(query: string, selectedFileId?:
         console.log('Result from tool:', result);
         
         // Add the tool result to the conversation
+        // Ensure result is a string (tools return JSON strings)
+        const resultString = typeof result === 'string' ? result : JSON.stringify(result);
         messages.push({ 
           role: 'tool', 
-          content: result,
+          content: resultString,
           tool_call_id: toolCallId 
         } as any);
         

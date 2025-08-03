@@ -16,35 +16,47 @@ interface ConversationDisplayProps {
   isLoading: boolean;
 }
 
-function robustLatexPreprocess(content: string): string {
-  // 1. Remove $...$ inside $$...$$ blocks
-  content = content.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
-    let cleaned = math.replace(/\$([^\$]+)\$/g, '$1');
-    cleaned = cleaned.replace(/\$/g, '');
-    return `$$${cleaned}$$`;
-  });
+function improvedLatexPreprocess(content: string): string {
+  // 1. Fix common LaTeX syntax issues
+  // Fix missing closing $ for inline math
+  content = content.replace(/(\$[^$]*)$([\n\r\s])/g, '$1$');
 
-  // 2. Fix \left\frac and \right| mistakes
-  content = content.replace(/\\left\\frac/g, '\\left.\\frac');
-  content = content.replace(/\\right\$/g, '\\right.');
-  content = content.replace(/\\right\|/g, '\\right|');
+  // Fix missing closing $$ for display math
+  content = content.replace(/(\$\$[^$]*)\$([\n\r\s])/g, '$1$$');
 
-  // 3. Ensure all \frac have two arguments
-  content = content.replace(/\\frac\{([^}]*)\}([^{])/g, '\\frac{$1}{}$2'); // Add empty braces if missing
-  content = content.replace(/\\frac\{([^}]*)\}$/g, '\\frac{$1}{}'); // End of string
+  // Fix \frac with missing arguments
+  content = content.replace(/\\frac\{([^}]*)\}([^{])/g, '\\frac{$1}{}$2');
+  content = content.replace(/\\frac\{([^}]*)\}$/g, '\\frac{$1}{}');
 
-  // 4. Remove unmatched $ at end of lines
-  content = content.replace(/\$(\s*[\n\r])/g, '$1');
+  // Fix common trig function formatting
+  content = content.replace(/\\sin\s+([^$])/g, '\\sin $1');
+  content = content.replace(/\\cos\s+([^$])/g, '\\cos $1');
+  content = content.replace(/\\tan\s+([^$])/g, '\\tan $1');
 
-  // 5. Optionally, close any unclosed $$ or $ blocks (very basic)
-  const numInline = (content.match(/\$/g) || []).length;
-  if (numInline % 2 !== 0) content += '$';
-  const numBlock = (content.match(/\$\$/g) || []).length;
-  if (numBlock % 2 !== 0) content += '$$';
+  // Fix hyperbolic function formatting
+  content = content.replace(/\\sinh\s+([^$])/g, '\\sinh $1');
+  content = content.replace(/\\cosh\s+([^$])/g, '\\cosh $1');
+  content = content.replace(/\\tanh\s+([^$])/g, '\\tanh $1');
 
-  // 6. Log for debugging
+  // Fix inverse trig function formatting
+  content = content.replace(/\\arcsin\s+([^$])/g, '\\arcsin $1');
+  content = content.replace(/\\arccos\s+([^$])/g, '\\arccos $1');
+  content = content.replace(/\\arctan\s+([^$])/g, '\\arctan $1');
+
+  // Ensure balanced delimiters (basic approach)
+  let dollarCount = (content.match(/\$/g) || []).length;
+  if (dollarCount % 2 !== 0) {
+    content += '$';
+  }
+
+  let doubleDollarCount = (content.match(/\$\$/g) || []).length;
+  if (doubleDollarCount % 2 !== 0) {
+    content += '$$';
+  }
+
+  // Log for debugging
   if (typeof window !== 'undefined') {
-    console.log('Robust processed AI content:', content);
+    console.log('Processed LaTeX content:', content);
   }
 
   return content;
@@ -116,7 +128,7 @@ export default function ConversationDisplay({ messages, isLoading }: Conversatio
                     em: ({node, ...props}) => <em className="italic" {...props} />,
                   }}
                 >
-                  {robustLatexPreprocess(message.content)}
+                  {improvedLatexPreprocess(message.content)}
                 </ReactMarkdown>
               </div>
             </div>

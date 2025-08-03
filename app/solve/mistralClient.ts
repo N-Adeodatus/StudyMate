@@ -12,6 +12,12 @@ const availableFunctions = {
 // Persistent messages array to store the conversation history
 let messages: any[] = [];
 
+// Add a system prompt to instruct the AI to use only valid LaTeX and never mix $...$ inside $$...$$ or vice versa
+const systemPrompt = {
+  role: 'system',
+  content: `You are a helpful math assistant. When writing math, never put $...$ inside $$...$$ or vice versa. Only use $...$ for inline math and $$...$$ for display math, and never mix them. Do not put $...$ around numbers or variables inside a math block. Always use valid LaTeX. For example, use \frac{a}{b} for fractions, x^{2} for exponents, and enclose math in $...$ for inline or $$...$$ for block math. Do not use plain text math like a/b or x^2. Always use LaTeX so it can be rendered beautifully.`
+};
+
 // Function to interact with Mistral AI as an agent with streaming support
 export async function agent(query: string, selectedFileId?: number) {
   // Initialize Mistral client with API key from environment variables
@@ -23,6 +29,7 @@ export async function agent(query: string, selectedFileId?: number) {
   const client = new Mistral({ apiKey });
 
   // Add user message to conversation history
+  messages.push(systemPrompt);
   messages.push({ 
     role: "user", 
     content: selectedFileId 
@@ -107,6 +114,7 @@ export async function* generateStreamingResponse(query: string, selectedFileId?:
     const client = new Mistral({ apiKey });
 
     // Add user message to conversation history
+    messages.push(systemPrompt);
     messages.push({ 
       role: "user", 
       content: selectedFileId 

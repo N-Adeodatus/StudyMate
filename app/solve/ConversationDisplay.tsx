@@ -16,6 +16,40 @@ interface ConversationDisplayProps {
   isLoading: boolean;
 }
 
+function robustLatexPreprocess(content: string): string {
+  // 1. Remove $...$ inside $$...$$ blocks
+  content = content.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+    let cleaned = math.replace(/\$([^\$]+)\$/g, '$1');
+    cleaned = cleaned.replace(/\$/g, '');
+    return `$$${cleaned}$$`;
+  });
+
+  // 2. Fix \left\frac and \right| mistakes
+  content = content.replace(/\\left\\frac/g, '\\left.\\frac');
+  content = content.replace(/\\right\$/g, '\\right.');
+  content = content.replace(/\\right\|/g, '\\right|');
+
+  // 3. Ensure all \frac have two arguments
+  content = content.replace(/\\frac\{([^}]*)\}([^{])/g, '\\frac{$1}{}$2'); // Add empty braces if missing
+  content = content.replace(/\\frac\{([^}]*)\}$/g, '\\frac{$1}{}'); // End of string
+
+  // 4. Remove unmatched $ at end of lines
+  content = content.replace(/\$(\s*[\n\r])/g, '$1');
+
+  // 5. Optionally, close any unclosed $$ or $ blocks (very basic)
+  const numInline = (content.match(/\$/g) || []).length;
+  if (numInline % 2 !== 0) content += '$';
+  const numBlock = (content.match(/\$\$/g) || []).length;
+  if (numBlock % 2 !== 0) content += '$$';
+
+  // 6. Log for debugging
+  if (typeof window !== 'undefined') {
+    console.log('Robust processed AI content:', content);
+  }
+
+  return content;
+}
+
 export default function ConversationDisplay({ messages, isLoading }: ConversationDisplayProps) {
   const [displayedMessages, setDisplayedMessages] = useState<Message[]>([]);
 
@@ -82,7 +116,7 @@ export default function ConversationDisplay({ messages, isLoading }: Conversatio
                     em: ({node, ...props}) => <em className="italic" {...props} />,
                   }}
                 >
-                  {message.content}
+                  {robustLatexPreprocess(message.content)}
                 </ReactMarkdown>
               </div>
             </div>

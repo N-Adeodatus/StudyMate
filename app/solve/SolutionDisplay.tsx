@@ -1,6 +1,9 @@
 
 'use client';
 
+import 'katex/dist/katex.min.css';
+import { BlockMath, InlineMath } from 'react-katex';
+
 interface SolutionDisplayProps {
   solution: any;
   isLoading: boolean;
@@ -56,7 +59,7 @@ export default function SolutionDisplay({ solution, isLoading, currentProblem }:
             </div>
             <div>
               <h3 className="font-semibold text-green-900 mb-2">Answer</h3>
-              <p className="text-green-800">{solution.answer}</p>
+              <BlockMath math={solution.answer} />
             </div>
           </div>
         </div>
@@ -71,7 +74,7 @@ export default function SolutionDisplay({ solution, isLoading, currentProblem }:
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 mb-2">{step.description}</h4>
-                  <p className="text-gray-700">{step.content}</p>
+                  <BlockMath math={step.content} />
                 </div>
               </div>
             ))}
@@ -85,7 +88,7 @@ export default function SolutionDisplay({ solution, isLoading, currentProblem }:
             </div>
             <div>
               <h4 className="font-semibold text-blue-900 text-sm mb-1">Additional Context</h4>
-              <p className="text-sm text-blue-800">{solution.explanation}</p>
+              <BlockMath math={solution.explanation} />
             </div>
           </div>
         </div>

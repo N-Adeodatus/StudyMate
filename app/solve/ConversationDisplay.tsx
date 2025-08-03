@@ -43,6 +43,21 @@ function improvedLatexPreprocess(content: string): string {
   content = content.replace(/\\arccos\s+([^$])/g, '\\arccos $1');
   content = content.replace(/\\arctan\s+([^$])/g, '\\arctan $1');
 
+  // Fix inverse hyperbolic function formatting
+  content = content.replace(/\\arsinh\s+([^$])/g, '\\arsinh $1');
+  content = content.replace(/\\arcosh\s+([^$])/g, '\\arcosh $1');
+  content = content.replace(/\\artanh\s+([^$])/g, '\\artanh $1');
+
+  // Fix \text{} formatting
+  content = content.replace(/\\text\{([^}]*)\}/g, '\\text{$1}');
+
+  // Fix \sqrt{} formatting
+  content = content.replace(/\\sqrt\{([^}]*)\}/g, '\\sqrt{$1}');
+
+  // Fix \left and \right formatting
+  content = content.replace(/\\left\s*([^$])/g, '\\left $1');
+  content = content.replace(/\\right\s*([^$])/g, '\\right $1');
+
   // Ensure balanced delimiters (basic approach)
   let dollarCount = (content.match(/\$/g) || []).length;
   if (dollarCount % 2 !== 0) {
